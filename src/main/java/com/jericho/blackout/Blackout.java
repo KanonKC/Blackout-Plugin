@@ -15,8 +15,8 @@ public final class Blackout extends JavaPlugin {
 
         Bukkit.getPluginManager().registerEvents(new GameSystem(this,Bukkit.getWorld("blackout_map")),this);
         
-        getCommand("blackout").setExecutor(new StartGameCommand(this));
-        getCommand("blackout-end").setExecutor(new EndGameCommand(this));
+        getCommand("start").setExecutor(new StartGameCommand(this));
+        getCommand("end").setExecutor(new EndGameCommand(this));
 
     }
 

@@ -2,9 +2,9 @@ package com.jericho.modules;
 
 import java.util.List;
 import java.util.Random;
-import java.util.jar.Attributes.Name;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -21,8 +21,13 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Team;
+import org.bukkit.scoreboard.Team.Option;
+import org.bukkit.scoreboard.Team.OptionStatus;
 
 import com.jericho.blackout.Blackout;
+
+import net.md_5.bungee.api.ChatColor;
 
 public class GameSystem implements Listener {
 
@@ -38,16 +43,16 @@ public class GameSystem implements Listener {
     Location lobbyLocation = new Location(world, -42,11,-89);
 
     Location hunterSpawnLocations[] = {
+        new Location(world,-64, 47, -98)
+    };
+    Location survivorSpawnLocations[] = {
         new Location(world,-95, 43, -89),
         new Location(world,-82, 42, -43),
         new Location(world,0, 39, -47),
         new Location(world,-4, 42, -127),
     };
-    Location survivorSpawnLocations[] = {
-        new Location(world,-64, 47, -98)
-    };
 
-    double gameDurationSeconds = 10;
+    double gameDurationSeconds = 120;
     
     BossBar timerBar;
     BukkitTask timerTask;
@@ -61,16 +66,31 @@ public class GameSystem implements Listener {
         timerKey = new NamespacedKey(plugin, "timerKey");
 
         timerBar = Bukkit.createBossBar(timerKey,"Time Left", BarColor.RED, BarStyle.SEGMENTED_20);
-        // taskIdKey = new NamespacedKey(plugin, "worldKey");
+    }
+
+    private Team getBlackoutTeam() {
+        Team team = Bukkit.getScoreboardManager().getMainScoreboard().getTeam("blackout");
+        if (team == null) {
+            team = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam("blackout");
+            team.setAllowFriendlyFire(false);
+            team.setOption(Option.NAME_TAG_VISIBILITY, OptionStatus.NEVER);
+        }
+        return team;
     }
     
     /**
     Start the game session.
-    @param world The world to end the game in
     */
     public void start() {
         // Pick a random player to be the hunter
         List<Player> allPlayers = world.getPlayers();
+
+        if (allPlayers.size() < 2) {
+            Bukkit.broadcastMessage(ChatColor.RED + "Not enough players to start the game");
+            return;
+        }
+
+        Team blackoutTeam = getBlackoutTeam();
 
         Player hunter = allPlayers.get(random.nextInt(allPlayers.size()));
         hunter.addScoreboardTag(HUNTER_TAG);
@@ -80,26 +100,35 @@ public class GameSystem implements Listener {
         survivors.remove(hunter);
         survivors.forEach(player -> {
             player.addScoreboardTag(SURVIVOR_TAG);
+            blackoutTeam.addEntry(player.getName());
         });
 
-        // Applied blindness to all players
+        blackoutTeam.addEntry(hunter.getName());
+
+        // Applied effect to all survivor
         survivors.forEach(player -> {
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 999999*20, 0, false, false, false));
+
+            // Random teleport survivors to a survivor spawn location
+            Location survivorSpawnLocation = this.survivorSpawnLocations[random.nextInt(this.survivorSpawnLocations.length)];
+            player.teleport(world.getBlockAt(survivorSpawnLocation).getLocation());
+
+            player.sendTitle(ChatColor.AQUA + "You are a Survivor", "Stay alive for 5 minutes", 10, 70, 20);
         });
+
+        // Applied effect to hunter
         hunter.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 999999*20, 0, false, false, false));
         hunter.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 999999*20, 5, false, false, false));
 
-
         // Random teleport hunter to a hunter spawn location
         Location hunterSpawnLocation = this.hunterSpawnLocations[random.nextInt(this.hunterSpawnLocations.length)];
-        // hunter.teleport(world.getBlockAt(hunterSpawnLocation).getLocation());
+        hunter.teleport(world.getBlockAt(hunterSpawnLocation).getLocation());
 
-        // Random teleport survivors to a survivor spawn location
-        survivors.forEach(player -> {
-            Location survivorSpawnLocation = this.survivorSpawnLocations[random.nextInt(this.survivorSpawnLocations.length)];
-            // player.teleport(world.getBlockAt(survivorSpawnLocation).getLocation());
-        });
+        hunter.sendTitle(ChatColor.RED + "You are the Hunter", "Take down all survivors in 5 minutes", 10, 70, 20);
 
+
+
+        // Display timer bar
         timerBar.setProgress(1);
         
         for (Player player: allPlayers) {
@@ -107,6 +136,7 @@ public class GameSystem implements Listener {
         }
         timerBar.addPlayer(hunter);
 
+        // Start timer
         timerTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -119,9 +149,9 @@ public class GameSystem implements Listener {
             }
         }.runTaskTimer(plugin, 0, 20);
 
+        // Save timer task id to world persistent data
         PersistentDataContainer dataContainer = world.getPersistentDataContainer();
         dataContainer.set(taskIdKey, PersistentDataType.INTEGER, timerTask.getTaskId());
-        // dataContainer.set(worldKey, PersistentDataType.STRING, world.getUID().toString());
     }
 
     /**
@@ -130,36 +160,47 @@ public class GameSystem implements Listener {
     */
     public void end(Integer endCode) {
         timerBar = Bukkit.getBossBar(timerKey);
+        System.out.println(timerBar);
+
         PersistentDataContainer dataContainer = world.getPersistentDataContainer();
         timerTask = Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getTaskId() == dataContainer.get(taskIdKey, PersistentDataType.INTEGER)).findFirst().orElse(null);
+
+        Team blackoutTeam = getBlackoutTeam();
 
         if (timerTask != null) {
             timerTask.cancel();
         }
         
         for (Player player: world.getPlayers()) {
+            
             if (player.getScoreboardTags().contains(HUNTER_TAG)) {
                 player.removeScoreboardTag(HUNTER_TAG);
             }
             if (player.getScoreboardTags().contains(SURVIVOR_TAG)) {
                 player.removeScoreboardTag(SURVIVOR_TAG);
             }
+
             player.removePotionEffect(PotionEffectType.BLINDNESS);
             player.removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
+            player.setGameMode(GameMode.ADVENTURE);
+            player.teleport(world.getBlockAt(lobbyLocation).getLocation());
+            blackoutTeam.removeEntry(player.getName());
+            
             timerBar.removePlayer(player);
-            // player.teleport(world.getBlockAt(lobbyLocation).getLocation());
+
+            if (endCode == 0) {
+                Bukkit.broadcastMessage("Game interrupted");
+            }
+            else if (endCode == 1) {
+                player.sendTitle(ChatColor.RED + "Hunter Win","No survivors left!", 10, 70, 20);
+            }
+            else if (endCode == 2) {
+                player.sendTitle(ChatColor.AQUA + "Survivor Win","The time ran out!", 10, 70, 20);
+            }
+
+            
         }
 
-        if (endCode == 0) {
-            Bukkit.broadcastMessage("Game interrupted");
-        }
-        else if (endCode == 1) {
-            Bukkit.broadcastMessage("Hunter Win");
-        }
-        else if (endCode == 2) {
-            Bukkit.broadcastMessage("Survivors win");
-        }
-        
     }
 
     private void endGameIfNoSurvivorLeft() {
@@ -173,8 +214,13 @@ public class GameSystem implements Listener {
 
     @EventHandler
     public void survivorDeathEvent(PlayerDeathEvent e) {
-        if (e.getEntity().getScoreboardTags().contains(SURVIVOR_TAG)) {
-            e.getEntity().removeScoreboardTag(SURVIVOR_TAG);
+        Player player = e.getEntity();
+        // Edit death message
+        e.setDeathMessage(ChatColor.RED + player.getName() + ChatColor.WHITE + " has been slained");
+        if (player.getScoreboardTags().contains(SURVIVOR_TAG)) {
+            player.removeScoreboardTag(SURVIVOR_TAG);
+            player.sendTitle(ChatColor.RED + "You have been slained", "You are now a spectator", 10, 70, 20);
+            player.setGameMode(GameMode.SPECTATOR);
         }
 
         endGameIfNoSurvivorLeft();
