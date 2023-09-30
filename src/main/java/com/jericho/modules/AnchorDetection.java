@@ -32,7 +32,7 @@ public class AnchorDetection {
     public void impluse() {
         if (count >= threshold) {
                     survivors.forEach(player -> {
-                        Double averageMovingDistance = getAverageMovingDistance(playerPreviousLocations.get(player));
+                        Double averageMovingDistance = movingAverageDistance(playerPreviousLocations.get(player));
                         if (averageMovingDistance < 1 && noHunterNearby(hunterNearbyPlayers.get(player))) {
                             
                             PotionEffect glowEffect = player.getPotionEffect(PotionEffectType.GLOWING);
@@ -82,7 +82,7 @@ public class AnchorDetection {
                 count++;
     }
 
-    private Double getAverageMovingDistance(Location[] locations) {
+    private Double movingAverageDistance(Location[] locations) {
         Double totalDistance = 0.0;
         for (int i = 0; i < locations.length - 1; i++) {
             totalDistance += locations[i].distance(locations[i+1]);
