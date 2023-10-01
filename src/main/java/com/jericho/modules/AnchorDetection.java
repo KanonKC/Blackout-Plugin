@@ -31,55 +31,55 @@ public class AnchorDetection {
 
     public void impluse() {
         if (count >= threshold) {
-                    survivors.forEach(player -> {
-                        Double averageMovingDistance = movingAverageDistance(playerPreviousLocations.get(player));
-                        if (averageMovingDistance < 1 && noHunterNearby(hunterNearbyPlayers.get(player))) {
-                            
-                            PotionEffect glowEffect = player.getPotionEffect(PotionEffectType.GLOWING);
-                            if (glowEffect == null) {
-                                player.sendMessage("You are now being " + ChatColor.RED +  "EXPOSED" + ChatColor.WHITE + " after standing still for too long!");
-                                hunter.sendMessage(ChatColor.AQUA + player.getName() + ChatColor.WHITE + "'s location has been revealed!");
-                            }
-                            
-                            player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 4*20, 0, false, false, false));
-                            
-                        }
-                    });
-                }
-
-                survivors.forEach(player -> {
-
-                    Location[] previousLocations = playerPreviousLocations.get(player);
-                    if (previousLocations == null) {
-                        previousLocations = new Location[threshold];
-                    }
-                    previousLocations[count % threshold] = player.getLocation();
-                    playerPreviousLocations.put(player, previousLocations);
-
-                    Boolean[] previousHunterNearbyPlayers = hunterNearbyPlayers.get(player);
-                    if (previousHunterNearbyPlayers == null) {
-                        previousHunterNearbyPlayers = new Boolean[threshold];
-                    }
-
-                    Boolean hunterNearby = false;
-                    for (Entity entity: player.getNearbyEntities(10,10,10)) {
-                        if (entity instanceof Player) {
-                            Player nearbyPlayer = (Player) entity;
-                            if (nearbyPlayer.getScoreboardTags().contains(HUNTER_TAG)) {
-                                previousHunterNearbyPlayers[count % threshold] = true;
-                                hunterNearby = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!hunterNearby) {
-                        previousHunterNearbyPlayers[count % threshold] = false;
-                    }
-
-                    hunterNearbyPlayers.put(player, previousHunterNearbyPlayers);
+            survivors.forEach(player -> {
+                Double averageMovingDistance = movingAverageDistance(playerPreviousLocations.get(player));
+                if (averageMovingDistance < 1 && noHunterNearby(hunterNearbyPlayers.get(player))) {
                     
-                });
-                count++;
+                    PotionEffect glowEffect = player.getPotionEffect(PotionEffectType.GLOWING);
+                    if (glowEffect == null) {
+                        player.sendMessage("You are now being " + ChatColor.RED +  "EXPOSED" + ChatColor.WHITE + " after standing still for too long!");
+                        hunter.sendMessage(ChatColor.AQUA + player.getName() + ChatColor.WHITE + "'s location has been revealed!");
+                    }
+                    
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 4*20, 0, false, false, false));
+                    
+                }
+            });
+        }
+
+        survivors.forEach(player -> {
+
+            Location[] previousLocations = playerPreviousLocations.get(player);
+            if (previousLocations == null) {
+                previousLocations = new Location[threshold];
+            }
+            previousLocations[count % threshold] = player.getLocation();
+            playerPreviousLocations.put(player, previousLocations);
+
+            Boolean[] previousHunterNearbyPlayers = hunterNearbyPlayers.get(player);
+            if (previousHunterNearbyPlayers == null) {
+                previousHunterNearbyPlayers = new Boolean[threshold];
+            }
+
+            Boolean hunterNearby = false;
+            for (Entity entity: player.getNearbyEntities(10,10,10)) {
+                if (entity instanceof Player) {
+                    Player nearbyPlayer = (Player) entity;
+                    if (nearbyPlayer.getScoreboardTags().contains(HUNTER_TAG)) {
+                        previousHunterNearbyPlayers[count % threshold] = true;
+                        hunterNearby = true;
+                        break;
+                    }
+                }
+            }
+            if (!hunterNearby) {
+                previousHunterNearbyPlayers[count % threshold] = false;
+            }
+
+            hunterNearbyPlayers.put(player, previousHunterNearbyPlayers);
+            
+        });
+        count++;
     }
 
     private Double movingAverageDistance(Location[] locations) {

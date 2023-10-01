@@ -1,6 +1,5 @@
 package com.jericho.modules;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -12,7 +11,6 @@ import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -63,7 +61,6 @@ public class GameSystem implements Listener {
 
     double gameDurationSeconds = 300;
     
-    BossBar timerBar;
     BukkitTask timerTask;
     
     Random random = new Random();
@@ -74,8 +71,6 @@ public class GameSystem implements Listener {
         taskIdKey = new NamespacedKey(plugin, "taskId");
         timerKey = new NamespacedKey(plugin, "timerKey");
         inGameKey = new NamespacedKey(plugin, "inGameKey");
-
-        timerBar = Bukkit.createBossBar(timerKey,"Time Left", BarColor.RED, BarStyle.SEGMENTED_20);
     }
 
     private Team getBlackoutTeam() {
@@ -102,6 +97,7 @@ public class GameSystem implements Listener {
             return;
         }
 
+        BossBar timerBar = Bukkit.createBossBar(timerKey,"Time Left", BarColor.RED, BarStyle.SEGMENTED_20);
         Team blackoutTeam = getBlackoutTeam();
 
         Player hunter = allPlayers.get(random.nextInt(allPlayers.size()));
@@ -179,8 +175,7 @@ public class GameSystem implements Listener {
     @param endCode 0 - Force to end the game, 1 - Game ended due to no survivor left, 2 - Game ended due to time is running out.
     */
     public void end(Integer endCode) {
-        timerBar = Bukkit.getBossBar(timerKey);
-        System.out.println(timerBar);
+        BossBar timerBar = Bukkit.getBossBar(timerKey);
 
         PersistentDataContainer dataContainer = world.getPersistentDataContainer();
         timerTask = Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getTaskId() == dataContainer.get(taskIdKey, PersistentDataType.INTEGER)).findFirst().orElse(null);
@@ -208,6 +203,7 @@ public class GameSystem implements Listener {
             blackoutTeam.removeEntry(player.getName());
             
             timerBar.removePlayer(player);
+            System.out.println("Remove timer from" + player.getName());
 
             if (endCode == 0) {
                 Bukkit.broadcastMessage("Game interrupted");
@@ -243,10 +239,16 @@ public class GameSystem implements Listener {
     public void survivorDeathEvent(PlayerDeathEvent e) {
         Player player = e.getEntity();
         PersistentDataContainer dataContainer = world.getPersistentDataContainer();
-        if (dataContainer.get(inGameKey, PersistentDataType.BOOLEAN) == null || dataContainer.get(inGameKey, PersistentDataType.BOOLEAN) == false) {
+        Boolean gameIsRunning = dataContainer.get(inGameKey, PersistentDataType.BOOLEAN);
+        // System.out.println(gameIsRunning);
+        // System.out.println(gameIsRunning == null);
+        // System.out.println(!gameIsRunning);
+        if (gameIsRunning == null || !gameIsRunning) {
+            // System.out.println("Return");
             return;
         }
         // Edit death message
+        // System.out.println("Should not work");
         e.setDeathMessage(ChatColor.RED + player.getName() + ChatColor.WHITE + " has been slained");
         if (player.getScoreboardTags().contains(SURVIVOR_TAG)) {
             player.removeScoreboardTag(SURVIVOR_TAG);
