@@ -15,8 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -61,27 +59,31 @@ public class GameSystem implements Listener {
 
     double gameDurationSeconds = 300;
     
+    BossBar timerBar;
     BukkitTask timerTask;
+    Boolean gameIsRunning = false;
+    Team blackoutTeam;
     
     Random random = new Random();
+
 
     public GameSystem(Blackout plugin,World world) {
         this.plugin = plugin;
         this.world = world;
+
         taskIdKey = new NamespacedKey(plugin, "taskId");
         timerKey = new NamespacedKey(plugin, "timerKey");
         inGameKey = new NamespacedKey(plugin, "inGameKey");
-    }
 
-    private Team getBlackoutTeam() {
-        Team team = Bukkit.getScoreboardManager().getMainScoreboard().getTeam("blackout");
-        if (team == null) {
-            team = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam("blackout");
-            team.setAllowFriendlyFire(false);
-            team.setOption(Option.NAME_TAG_VISIBILITY, OptionStatus.NEVER);
-            team.allowFriendlyFire();
+        blackoutTeam = Bukkit.getScoreboardManager().getMainScoreboard().getTeam("blackout");
+        if (blackoutTeam == null) {
+            blackoutTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam("blackout");
+            blackoutTeam.setAllowFriendlyFire(false);
+            blackoutTeam.setOption(Option.NAME_TAG_VISIBILITY, OptionStatus.NEVER);
+            blackoutTeam.allowFriendlyFire();
         }
-        return team;
+
+        timerBar = Bukkit.createBossBar(timerKey,"Time Left", BarColor.RED, BarStyle.SEGMENTED_20);
     }
     
     /**
@@ -96,9 +98,6 @@ public class GameSystem implements Listener {
             Bukkit.broadcastMessage(ChatColor.RED + "Not enough players to start the game");
             return;
         }
-
-        BossBar timerBar = Bukkit.createBossBar(timerKey,"Time Left", BarColor.RED, BarStyle.SEGMENTED_20);
-        Team blackoutTeam = getBlackoutTeam();
 
         Player hunter = allPlayers.get(random.nextInt(allPlayers.size()));
         hunter.addScoreboardTag(HUNTER_TAG);
@@ -164,10 +163,7 @@ public class GameSystem implements Listener {
             }
         }.runTaskTimer(plugin, 0, 20);
 
-        // Save timer task id to world persistent data
-        PersistentDataContainer dataContainer = world.getPersistentDataContainer();
-        dataContainer.set(taskIdKey, PersistentDataType.INTEGER, timerTask.getTaskId());
-        dataContainer.set(inGameKey, PersistentDataType.BOOLEAN, true);
+        gameIsRunning = true;
     }
 
     /**
@@ -175,13 +171,7 @@ public class GameSystem implements Listener {
     @param endCode 0 - Force to end the game, 1 - Game ended due to no survivor left, 2 - Game ended due to time is running out.
     */
     public void end(Integer endCode) {
-        BossBar timerBar = Bukkit.getBossBar(timerKey);
-
-        PersistentDataContainer dataContainer = world.getPersistentDataContainer();
-        timerTask = Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getTaskId() == dataContainer.get(taskIdKey, PersistentDataType.INTEGER)).findFirst().orElse(null);
-
-        Team blackoutTeam = getBlackoutTeam();
-
+       
         if (timerTask != null) {
             timerTask.cancel();
         }
@@ -218,13 +208,11 @@ public class GameSystem implements Listener {
             
         }
 
-        dataContainer.set(inGameKey, PersistentDataType.BOOLEAN, false);
-
+        gameIsRunning = false;
     }
 
     private void endGameIfNoSurvivorLeft() {
-        PersistentDataContainer dataContainer = world.getPersistentDataContainer();
-        if (dataContainer.get(inGameKey, PersistentDataType.BOOLEAN) == null || dataContainer.get(inGameKey, PersistentDataType.BOOLEAN) == false) {
+        if (!gameIsRunning) {
             return;
         }
         for (Player player: world.getPlayers()) {
@@ -238,12 +226,10 @@ public class GameSystem implements Listener {
     @EventHandler
     public void survivorDeathEvent(PlayerDeathEvent e) {
         Player player = e.getEntity();
-        PersistentDataContainer dataContainer = world.getPersistentDataContainer();
-        Boolean gameIsRunning = dataContainer.get(inGameKey, PersistentDataType.BOOLEAN);
         // System.out.println(gameIsRunning);
         // System.out.println(gameIsRunning == null);
         // System.out.println(!gameIsRunning);
-        if (gameIsRunning == null || !gameIsRunning) {
+        if (!gameIsRunning) {
             // System.out.println("Return");
             return;
         }
