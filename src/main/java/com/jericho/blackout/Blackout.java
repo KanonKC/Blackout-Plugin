@@ -1,24 +1,23 @@
 package com.jericho.blackout;
 
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.jericho.interfaces.EndGameCommand;
 import com.jericho.interfaces.StartGameCommand;
-import com.jericho.modules.GameSystem;
+import com.jericho.modules.GameSystemController;
 
 public final class Blackout extends JavaPlugin {
 
-    GameSystem gameSystem = new GameSystem(this,Bukkit.getWorld("blackout_map"));
+    GameSystemController gameSystemController;// = new GameSystemController(this);
 
     @Override
     public void onEnable() {
         // Plugin startup logic
-
-        Bukkit.getPluginManager().registerEvents(gameSystem,this);
+        gameSystemController = new GameSystemController(this);
+        // Bukkit.getPluginManager().registerEvents(gameSystemController,this);
         
-        getCommand("start").setExecutor(new StartGameCommand(gameSystem));
-        getCommand("end").setExecutor(new EndGameCommand(gameSystem));
+        getCommand("start").setExecutor(new StartGameCommand(gameSystemController));
+        getCommand("end").setExecutor(new EndGameCommand(gameSystemController));
 
     }
 

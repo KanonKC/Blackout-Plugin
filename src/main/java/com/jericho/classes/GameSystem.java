@@ -1,4 +1,4 @@
-package com.jericho.modules;
+package com.jericho.classes;
 
 import java.util.List;
 import java.util.Random;
@@ -24,14 +24,14 @@ import org.bukkit.scoreboard.Team.Option;
 import org.bukkit.scoreboard.Team.OptionStatus;
 
 import com.jericho.blackout.Blackout;
+import com.jericho.modules.AnchorDetection;
 
 import net.md_5.bungee.api.ChatColor;
 
 public class GameSystem implements Listener {
 
-    Blackout plugin;
-    World world ;
-
+    Blackout plugin; 
+    
     NamespacedKey taskIdKey;
     NamespacedKey timerKey;
     NamespacedKey inGameKey;
@@ -39,23 +39,10 @@ public class GameSystem implements Listener {
     String HUNTER_TAG = "hunter";
     String SURVIVOR_TAG = "survivor";
 
-    Location lobbyLocation = new Location(world, -72,-34,-88);
-
-    Location hunterSpawnLocations[] = {
-        new Location(world,-61 ,42, -87)
-    };
-    Location survivorSpawnLocations[] = {
-        new Location(world,-80, 58,-98),
-        new Location(world,-70, 67,-93),
-        new Location(world,-72, 50,-76),
-        new Location(world,-58, 50,-84),
-        new Location(world,-87, 59,-75),
-        new Location(world,-74, 47,-82),
-        new Location(world,-81, 41,-84),
-        new Location(world,-64, 62,-98),
-        new Location(world,-84, 62,-78),
-        new Location(world,-83, 46,-98)
-    };
+    protected World world;
+    protected Location lobbyLocation;
+    protected Location hunterSpawnLocations[];
+    protected Location survivorSpawnLocations[];
 
     double gameDurationSeconds = 300;
     
@@ -66,10 +53,10 @@ public class GameSystem implements Listener {
     
     Random random = new Random();
 
-
-    public GameSystem(Blackout plugin,World world) {
+    public GameSystem(Blackout plugin) {
         this.plugin = plugin;
-        this.world = world;
+
+        Bukkit.getPluginManager().registerEvents(this, plugin);
 
         taskIdKey = new NamespacedKey(plugin, "taskId");
         timerKey = new NamespacedKey(plugin, "timerKey");
@@ -221,6 +208,10 @@ public class GameSystem implements Listener {
             }
         }
         end(1);
+    }
+
+    public World getWorld() {
+        return world;
     }
 
     @EventHandler

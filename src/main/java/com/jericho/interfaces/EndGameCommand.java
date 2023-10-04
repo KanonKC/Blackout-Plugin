@@ -5,20 +5,21 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.jericho.modules.GameSystem;
+import com.jericho.modules.GameSystemController;
 
 public class EndGameCommand implements CommandExecutor {
-    GameSystem gameSystem;
+    GameSystemController controller;
     
-    public EndGameCommand(GameSystem gameSystem) {
-        this.gameSystem = gameSystem;
+    public EndGameCommand(GameSystemController controller) {
+        this.controller = controller;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         
         if (sender instanceof Player) {
-            gameSystem.end(0);
+            Player player = (Player) sender;
+            controller.getGameSystem(player.getWorld()).end(0);;
         }
         
         return false;
