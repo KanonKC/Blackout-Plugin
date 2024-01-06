@@ -6,8 +6,8 @@ import org.bukkit.Location;
 import com.jericho.blackout.Blackout;
 import com.jericho.classes.GameSystem;
 
-public class DevGameSystem extends GameSystem {
-    public DevGameSystem(Blackout plugin) {
+public class DevServer extends GameSystem {
+    public DevServer(Blackout plugin) {
         super(plugin);
 
         world = Bukkit.getWorld("blackout_map");

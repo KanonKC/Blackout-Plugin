@@ -33,7 +33,7 @@ public class AnchorDetection {
         if (count >= threshold) {
             survivors.forEach(player -> {
                 Double averageMovingDistance = movingAverageDistance(playerPreviousLocations.get(player));
-                if (averageMovingDistance < 1 && noHunterNearby(hunterNearbyPlayers.get(player))) {
+                if (averageMovingDistance < 1 && noHunterNearby(hunterNearbyPlayers.get(player)) && player.getScoreboardTags().contains(SURVIVOR_TAG)) {
                     
                     PotionEffect glowEffect = player.getPotionEffect(PotionEffectType.GLOWING);
                     if (glowEffect == null) {
